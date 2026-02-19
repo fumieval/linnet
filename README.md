@@ -1,0 +1,56 @@
+# linnet
+
+Get a bird's-eye view of line counts in your codebase. linnet recursively scans directories, counts lines per file, and renders a colour-coded tree so you can spot oversized or deeply-nested files at a glance.
+
+## Installation
+
+```bash
+bun link
+```
+
+## Usage
+
+```bash
+linnet [options] [paths...]
+```
+
+When no paths are given, the current working directory is used.
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-e, --exact` | Show exact line counts instead of ballpark approximations |
+| `-v, --verbose` | Show all files, not just notable ones |
+
+### Ballpark vs exact mode
+
+By default linnet displays **ballpark** counts (`200+`, `500+`, `1k+`, `2k+`, …) and collapses groups of small files to keep the output concise. Pass `--exact` to see precise numbers.
+
+### Notable files
+
+In normal (non-verbose) mode, only **notable** files are shown — those with **500 or more lines** or a **max indentation level of 16+**. Files matching ignore patterns (tests, stories, specs) are also hidden. Use `--verbose` to disable this filter.
+
+## Configuration
+
+Place a `linnet.jsonc` or `linnet.json` in your project (searched upward to the git root):
+
+```jsonc
+{
+  // Show files with this many lines or more (default: 500)
+  "notableLines": 500,
+  // Show files with this indent depth or more (default: 16)
+  "notableIndent": 16,
+  // Regex patterns for files to exclude from the notable filter
+  "ignorePatterns": ["\\.stories\\.[jt]sx?$", "\\.test\\.[jt]sx?$", "\\.spec\\.[jt]sx?$"],
+  // In ballpark mode, collapse files below this line count (default: 200)
+  "collapseBelow": 200,
+  // Collapse only when there are more than this many small files (default: 5)
+  "collapseThreshold": 5
+}
+```
+
+
+## License
+
+MIT
