@@ -1,7 +1,10 @@
 {
   "name": "@nestling.dev/linnet",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Get a bird's-eye view of the line counts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "files": ["src"],
   "author": "Fumiaki Kinoshita <fumiexcel@gmail.com>",
   "license": "MIT",
