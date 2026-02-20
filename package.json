@@ -1,9 +1,9 @@
 {
-  "name": "@nestling/linnet",
+  "name": "@nestling.dev/linnet",
   "description": "Get a bird's-eye view of the line counts",
   "version": "0.0.1",
   "files": ["src"],
-  "author": "Fumi <fumi@nestling.dev>",
+  "author": "Fumiaki Kinoshita <fumiexcel@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
