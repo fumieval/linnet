@@ -131,7 +131,7 @@ function getGitTrackedFiles(dir: string): Set<string> | null {
   }
 }
 
-function walk(dir: string, ig: Ignore, rootDir: string, tracked: Set<string> | null, all: boolean): Node {
+function walk(dir: string, ig: Ignore, rootDir: string, tracked: Set<string> | null, all: boolean, ignorePatterns: RegExp[]): Node {
   const name = path.basename(dir);
   const children: Node[] = [];
 
@@ -146,11 +146,14 @@ function walk(dir: string, ig: Ignore, rootDir: string, tracked: Set<string> | n
 
     const abs = path.join(dir, entry.name);
     const rel = path.relative(rootDir, abs);
+    const isDir = entry.isDirectory();
+    const relPath = rel + (isDir ? "/" : "");
 
-    if (combined.ignores(rel + (entry.isDirectory() ? "/" : ""))) continue;
+    if (combined.ignores(relPath)) continue;
+    if (ignorePatterns.some(p => p.test(relPath))) continue;
 
-    if (entry.isDirectory()) {
-      const child = walk(abs, combined, rootDir, tracked, all);
+    if (isDir) {
+      const child = walk(abs, combined, rootDir, tracked, all, ignorePatterns);
       if (child.lines > 0 || child.children.length > 0) {
         children.push(child);
       }
@@ -169,10 +172,11 @@ function walk(dir: string, ig: Ignore, rootDir: string, tracked: Set<string> | n
   return { name, lines: total, maxIndent, children };
 }
 
-export function scanDirectory(dir: string, all = false): Node {
+export function scanDirectory(dir: string, all = false, ignorePatterns: string[] = []): Node {
   const rootIg = ignore();
   const gitRoot = findGitRoot(dir) ?? dir;
   addGitignore(rootIg, gitRoot);
   const tracked = all ? null : getGitTrackedFiles(dir);
-  return walk(dir, rootIg, gitRoot, tracked, all);
+  const compiled = ignorePatterns.map(p => new RegExp(p));
+  return walk(dir, rootIg, gitRoot, tracked, all, compiled);
 }

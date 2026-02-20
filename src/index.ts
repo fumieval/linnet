@@ -33,7 +33,7 @@ for (const target of targets) {
     const lines = countLines(abs);
     console.log(`${path.basename(abs)}  ${formatLines(lines, ballpark)}`);
   } else if (stat.isDirectory()) {
-    const tree = scanDirectory(abs, all);
+    const tree = scanDirectory(abs, all, config.ignorePatterns);
     render(tree, ballpark, verbose, config);
   }
 }

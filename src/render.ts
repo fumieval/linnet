@@ -63,22 +63,23 @@ function colorIndent(n: number): string {
 // Rendering
 // ---------------------------------------------------------------------------
 
-function isIgnored(name: string, patterns: RegExp[]): boolean {
-  return patterns.some(p => p.test(name));
-}
-
-function isNotable(node: Node, config: ResolvedConfig, ignorePatterns: RegExp[]): boolean {
+function isNotable(node: Node, config: ResolvedConfig): boolean {
   if (node.children.length === 0) {
-    if (isIgnored(node.name, ignorePatterns)) return false;
     return node.lines >= config.notableLines || node.maxIndent >= config.notableIndent;
   }
-  return node.children.some(c => isNotable(c, config, ignorePatterns));
+  return node.children.some(c => isNotable(c, config));
 }
 
-export function render(node: Node, ballpark: boolean, verbose: boolean, config: ResolvedConfig, indent = 0, ignorePatterns?: RegExp[]): void {
-  const patterns = ignorePatterns ?? config.ignorePatterns.map(p => new RegExp(p));
+export function render(
+  node: Node,
+  ballpark: boolean,
+  verbose: boolean,
+  config: ResolvedConfig,
+  indent = 0,
+  isRoot = true,
+): void {
   const prefix = " ".repeat(indent * 2);
-  const label = formatLines(node.lines, ballpark);
+  const label = isRoot ? `${node.lines}` : formatLines(node.lines, ballpark);
   const isDir = node.children.length > 0;
   const name = isDir ? pc.bold(node.name) : node.name;
   const lineLabel = isDir
@@ -87,25 +88,25 @@ export function render(node: Node, ballpark: boolean, verbose: boolean, config: 
   const indentSuffix = isDir ? "" : `  ${pc.dim("indent:")}${colorIndent(node.maxIndent)}`;
   console.log(`${prefix}${name}  ${lineLabel}${indentSuffix}`);
 
-  const children = verbose ? node.children : node.children.filter(c => isNotable(c, config, patterns));
+  const children = verbose ? node.children : node.children.filter(c => isNotable(c, config));
 
   if (ballpark) {
     const small = children.filter(c => c.lines < config.collapseBelow);
     const rest = children.filter(c => c.lines >= config.collapseBelow);
     for (const child of rest) {
-      render(child, ballpark, verbose, config, indent + 1, patterns);
+      render(child, ballpark, verbose, config, indent + 1, false);
     }
     if (small.length > config.collapseThreshold) {
       const summary = `… ${formatCount(small.length)} files < ${config.collapseBelow} lines`;
       console.log(`${" ".repeat((indent + 1) * 2)}${pc.dim(summary)}`);
     } else {
       for (const child of small) {
-        render(child, ballpark, verbose, config, indent + 1, patterns);
+        render(child, ballpark, verbose, config, indent + 1, false);
       }
     }
   } else {
     for (const child of children) {
-      render(child, ballpark, verbose, config, indent + 1, patterns);
+      render(child, ballpark, verbose, config, indent + 1, false);
     }
   }
 }
