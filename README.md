@@ -22,6 +22,16 @@ When no paths are given, the current working directory is used.
 |------|-------------|
 | `-e, --exact` | Show exact line counts instead of ballpark approximations |
 | `-v, --verbose` | Show all files, not just notable ones |
+| `-a, --all` | Include all files, not just git-tracked source files |
+
+### Default filters
+
+By default linnet applies two filters so the output focuses on source code:
+
+1. **Git-tracked only** — only files listed by `git ls-files` are counted. If the directory is not inside a git repository, all non-ignored files are included as a fallback.
+2. **Source files only** — files with known non-source extensions (images, videos, audio, fonts, documents, archives, compiled objects, etc.) are skipped.
+
+Pass `--all` to disable both filters and include every non-ignored file.
 
 ### Ballpark vs exact mode
 

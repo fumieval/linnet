@@ -1,6 +1,7 @@
 import ignore, { type Ignore } from "ignore";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const THRESHOLDS = [10000, 5000, 2000, 1000, 500, 200, 100];
 
@@ -77,6 +78,38 @@ function addGitignore(ig: Ignore, dir: string): void {
   }
 }
 
+const BINARY_EXTENSIONS = new Set([
+  // Images
+  ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".avif",
+  ".tiff", ".tif", ".psd", ".ai", ".eps", ".raw", ".cr2", ".nef",
+  ".heic", ".heif", ".svg",
+  // Video
+  ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm", ".m4v",
+  ".mpg", ".mpeg",
+  // Audio
+  ".mp3", ".wav", ".ogg", ".flac", ".aac", ".wma", ".m4a", ".opus",
+  // Fonts
+  ".ttf", ".otf", ".woff", ".woff2", ".eot",
+  // Documents
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+  ".odt", ".ods", ".odp", ".pages", ".numbers", ".key",
+  // Archives
+  ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
+  ".jar", ".war", ".ear",
+  // Compiled / object
+  ".o", ".obj", ".so", ".dylib", ".dll", ".a", ".lib", ".exe",
+  ".class", ".pyc", ".pyo", ".beam", ".wasm",
+  // Databases
+  ".db", ".sqlite", ".sqlite3",
+  // Other binary
+  ".bin", ".dat", ".iso", ".dmg", ".pkg", ".deb", ".rpm",
+]);
+
+function isBinaryFile(name: string): boolean {
+  const ext = path.extname(name).toLowerCase();
+  return BINARY_EXTENSIONS.has(ext);
+}
+
 export function countLines(filePath: string): number {
   const content = fs.readFileSync(filePath);
   let count = 0;
@@ -88,11 +121,20 @@ export function countLines(filePath: string): number {
   return count;
 }
 
-function walk(dir: string, ig: Ignore, rootDir: string): Node {
+function getGitTrackedFiles(dir: string): Set<string> | null {
+  try {
+    const output = execFileSync("git", ["ls-files"], { cwd: dir, encoding: "utf8" });
+    const files = output.trim().split("\n").filter(Boolean);
+    return new Set(files.map(f => path.resolve(dir, f)));
+  } catch {
+    return null;
+  }
+}
+
+function walk(dir: string, ig: Ignore, rootDir: string, tracked: Set<string> | null, all: boolean): Node {
   const name = path.basename(dir);
   const children: Node[] = [];
 
-  // Layer any .gitignore found in this directory on top of the inherited rules
   const combined = ignore().add(ig);
   addGitignore(combined, dir);
 
@@ -100,7 +142,7 @@ function walk(dir: string, ig: Ignore, rootDir: string): Node {
   entries.sort((a, b) => a.name.localeCompare(b.name));
 
   for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue; // skip hidden
+    if (entry.name.startsWith(".")) continue;
 
     const abs = path.join(dir, entry.name);
     const rel = path.relative(rootDir, abs);
@@ -108,11 +150,13 @@ function walk(dir: string, ig: Ignore, rootDir: string): Node {
     if (combined.ignores(rel + (entry.isDirectory() ? "/" : ""))) continue;
 
     if (entry.isDirectory()) {
-      const child = walk(abs, combined, rootDir);
+      const child = walk(abs, combined, rootDir, tracked, all);
       if (child.lines > 0 || child.children.length > 0) {
         children.push(child);
       }
     } else if (entry.isFile()) {
+      if (tracked && !tracked.has(abs)) continue;
+      if (!all && isBinaryFile(entry.name)) continue;
       const lines = countLines(abs);
       const maxIndent = maxIndentLevel(abs);
       children.push({ name: entry.name, lines, maxIndent, children: [] });
@@ -125,12 +169,10 @@ function walk(dir: string, ig: Ignore, rootDir: string): Node {
   return { name, lines: total, maxIndent, children };
 }
 
-export function scanDirectory(dir: string): Node {
+export function scanDirectory(dir: string, all = false): Node {
   const rootIg = ignore();
-  // Use the git root as the reference for relative-path resolution so that
-  // patterns like "backend/src/generated/" in the repo root's .gitignore are
-  // matched correctly even when scanning a subdirectory.
   const gitRoot = findGitRoot(dir) ?? dir;
   addGitignore(rootIg, gitRoot);
-  return walk(dir, rootIg, gitRoot);
+  const tracked = all ? null : getGitTrackedFiles(dir);
+  return walk(dir, rootIg, gitRoot, tracked, all);
 }
