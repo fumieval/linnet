@@ -2,10 +2,14 @@
 
 Get a bird's-eye view of line counts in your codebase. linnet recursively scans directories, counts lines per file, and renders a colour-coded tree so you can spot oversized or deeply-nested files at a glance.
 
+## Prerequisites
+
+Requires [Bun](https://bun.sh). linnet executes TypeScript directly via Bun, so it does not work with Node.js alone.
+
 ## Usage
 
 ```bash
-npx -y @nestling.dev/linnet [options] [paths...]
+bunx @nestling.dev/linnet [options] [paths...]
 ```
 
 When no paths are given, the current working directory is used.
@@ -33,7 +37,7 @@ By default linnet displays **ballpark** counts (`200+`, `500+`, `1k+`, `2k+`, �
 
 ### Notable files
 
-In normal (non-verbose) mode, only **notable** files are shown — those with **500 or more lines** or a **max indentation level of 16+**. Files matching ignore patterns (tests, stories, specs) are also hidden. Use `--verbose` to disable this filter.
+In normal (non-verbose) mode, only **notable** files are shown — those with **500 or more lines** or a **max indentation level of 16+**. Use `--verbose` to disable this filter. Files matching ignore patterns (tests, stories, specs by default) are always excluded from the scan regardless of `--verbose`.
 
 ## Configuration
 
@@ -45,7 +49,7 @@ Place a `linnet.jsonc` or `linnet.json` in your project (searched upward to the 
   "notableLines": 500,
   // Show files with this indent depth or more (default: 16)
   "notableIndent": 16,
-  // Regex patterns for files to exclude from the notable filter
+  // Regex patterns for files to always exclude from the scan
   "ignorePatterns": ["\\.stories\\.[jt]sx?$", "\\.test\\.[jt]sx?$", "\\.spec\\.[jt]sx?$"],
   // In ballpark mode, collapse files below this line count (default: 200)
   "collapseBelow": 200,
